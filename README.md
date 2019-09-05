@@ -1,0 +1,2 @@
+# MyMFC
+some mfc app 

@@ -1,0 +1,112 @@
+
+//下载文件
+BOOL DownloadFiles(CString url, CString downloadPath)
+{
+	if (URLDownloadToFile(NULL, url, downloadPath, 0, 0) == S_OK) return true;
+	else return false;
+}
+
+
+//取出中间文本
+CString GetzText(CString m, CString b, CString c)
+{
+	int nBegin = m.FindOneOf(b);
+	int nEnd = m.FindOneOf(c);
+	CString str = m.Mid(nBegin + b.GetLength(), nEnd - nBegin - b.GetLength());
+	return str;
+}
+
+//模拟浏览器发送HTTP请求函数
+std::string HttpRequest(CString  lpHostName, short sPort, CString  lpUrl, CString lpMethod, char*  lpPostData, int nPostDataLen)
+{
+	HINTERNET hInternet, hConnect, hRequest;
+
+	BOOL bRet;
+
+	std::string strResponse;
+
+	hInternet = NULL;
+	hConnect = NULL;
+	hRequest = NULL;
+
+	hInternet = (HINSTANCE)InternetOpen(L"User-Agent", INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0);
+	if (!hInternet)
+		goto Ret0;
+
+	hConnect = (HINSTANCE)InternetConnect(hInternet, lpHostName, sPort, NULL, L"HTTP/1.1", INTERNET_SERVICE_HTTP, 0, 0);
+	if (!hConnect)
+		goto Ret0;
+
+	hRequest = (HINSTANCE)HttpOpenRequest(hConnect, lpMethod, lpUrl, L"HTTP/1.1", NULL, NULL, INTERNET_FLAG_RELOAD, 0);
+	if (!hRequest)
+		goto Ret0;
+
+	//bRet = HttpAddRequestHeaders(hRequest,"Content-Type: application/x-www-form-urlencoded",Len(FORMHEADERS),HTTP_ADDREQ_FLAG_REPLACE | HTTP_ADDREQ_FLAG_ADD);
+	//if(!bRet)
+	//goto Ret0;
+
+	bRet = HttpSendRequest(hRequest, NULL, 0, (LPVOID)lpPostData, nPostDataLen);
+
+	while (TRUE)
+	{
+		char cReadBuffer[4096];
+		unsigned long lNumberOfBytesRead;
+		bRet = InternetReadFile(hRequest, cReadBuffer, sizeof(cReadBuffer)-1, &lNumberOfBytesRead);
+		if (!bRet || !lNumberOfBytesRead)
+			break;
+		cReadBuffer[lNumberOfBytesRead] = 0;
+		strResponse = strResponse + cReadBuffer;
+	}
+
+Ret0:
+	if (hRequest)
+		InternetCloseHandle(hRequest);
+	if (hConnect)
+		InternetCloseHandle(hConnect);
+	if (hInternet)
+		InternetCloseHandle(hInternet);
+
+	return strResponse;
+}
+
+
+//解析函数
+void C网易云解析Dlg::OnBnClickedButtonGet()
+{
+	CString str_input;
+	GetDlgItemText(IDC_EDIT_INPUT, str_input);
+	CString str_out;
+
+	if (str_input == "")
+	{
+		MessageBox(L"请输入链接再进行操作哦~", L"Caption");
+	}
+	else
+	{
+		//取出中间的ID
+		str_out = GetzText(str_input, L"=", L"&");
+
+		//拼接链接获取真实歌曲链接
+		str_out = L"http://music.163.com/song/media/outer/url?id=" + str_out + L".mp3";
+
+		//SetDlgItemText(IDC_EDIT_OUT, str_out);
+
+		if (DownloadFiles(str_out, L"D:\\歌曲.mp3"))
+		{
+			CString str_down = _T("/select,D:\\歌曲.mp3");
+			ShellExecute(NULL, _T("open"), _T("explorer.exe"), str_down, NULL, SW_SHOWNORMAL);
+			MessageBox(L"下载成功！存储位置：D：\\歌曲.mp3", L"狗迪提示：");
+		}
+	}
+	//std::string strResponse = HttpRequest(str_out, 80, L"/", L"GET", NULL, 0);
+
+	//FILE * fp;
+	//errno_t t = fopen_s(&fp, "D:\\歌曲.mp3", "w");
+
+	//fwrite(strResponse.c_str(), 1, strResponse.length(), fp);
+
+	//fclose(fp);
+
+
+	
+}
